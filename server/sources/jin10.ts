@@ -31,17 +31,22 @@ export default defineSource(async () => {
     .trim() // 移除首尾空白字符
   const data: Jin10Item[] = JSON.parse(jsonStr)
 
-  return data.filter(k => (k.data.title || k.data.content) && !k.channel?.includes(5)).map((k) => {
+  // 【修改点】：删除了 !k.channel?.includes(5)，现在会包含 A 股等所有频道
+  return data.filter(k => (k.data.title || k.data.content)).map((k) => {
     const text = (k.data.title || k.data.content)!.replace(/<\/?b>/g, "")
-    const [,title, desc] = text.match(/^【([^】]*)】(.*)$/) ?? []
+    
+    // 尝试解析 【标题】描述 格式
+    const [, title, desc] = text.match(/^【([^】]*)】(.*)$/) ?? []
+    
     return {
       id: k.id,
-      title: title ?? text,
+      title: title ?? text, // 如果没有【】括号，则整段作为标题
       pubDate: parseRelativeDate(k.time, "Asia/Shanghai").valueOf(),
       url: `https://flash.jin10.com/detail/${k.id}`,
       extra: {
-        hover: desc,
-        info: !!k.important && "✰",
+        hover: desc, // 方括号后面的详细描述
+        info: !!k.important && "✰", // 重要新闻标记
+        channels: k.channel // 保留频道 ID 方便后续调试
       },
     }
   })
